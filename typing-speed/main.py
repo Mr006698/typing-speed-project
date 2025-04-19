@@ -3,6 +3,8 @@ from tkinter import ttk
 from ctypes import windll
 windll.shcore.SetProcessDpiAwareness(1)
 
+from word_slider import WordSlider
+
 from pprint import pprint
 
 WORD_FILE = 'typing-speed/test_file.txt'
@@ -10,46 +12,46 @@ WORD_FILE = 'typing-speed/test_file.txt'
 class TypingSpeedTest(tk.Tk):
   def __init__(self, screenName = None, baseName = None, className = "Tk", useTk = True, sync = False, use = None) -> None:
     super().__init__(screenName, baseName, className, useTk, sync, use)
-    self.title = 'Typing Speed Test'
+    self.title('Typing Speed Test')
     self.minsize(640, 480)
     self._load_theme()
+    self.bind('<Key>', self._key_press)
     # Hide the root window until centered on screen
     self.withdraw()
-
-    self._load_words()
-    self._prepare_words()
-    self.bind('<Key>', self._key_press)
-
-    # Create the GUI
-    # word_display = ttk.Label(self, text=self._word_list[0])
-    # word_display.pack()
-
-    word_len = len(self._word_list[2])
-    char_spacing = 0.02
-    for idx in range(word_len):
-      label = ttk.Label(self, text=self._word_list[2][idx])
-      label.place(relx=0.5+(idx*char_spacing), rely=0.2, anchor=tk.CENTER)
-    
-    # Show the window
     self._center_window()
     self.deiconify()
 
-
-  # Load words from file into a list
-  def _load_words(self) -> None:
-    try:
-      with open(WORD_FILE) as file:
-        # Flatten the files into a list of words
-        self._word_list = [word for words in file.readlines() for word in words.split()]
-
-    except FileNotFoundError as ex:
-      print(f'{WORD_FILE}: {ex.strerror}')
+    # Create the GUI
+    self._create_gui()
 
 
-  def _prepare_words(self) -> None:
-    self._num_words = len(self._word_list)
-    self._current_word = self._word_list[0]
-    print(f'Word file has: {self._num_words} words. Current word is {self._current_word}.')
+  def _create_gui(self) -> None:
+    # Speed and accuracy metrics
+    self._words_per_minute = tk.StringVar(self, '0')
+    self._accuracy = tk.StringVar(self, '0%')
+    performance_display = ttk.Frame(self)
+    wpf_label = ttk.Label(performance_display, text='Words per Minute: ')
+    wpf_label.pack(side=tk.LEFT)
+    wpf_value = ttk.Label(performance_display, textvariable=self._words_per_minute)
+    wpf_value.pack(side=tk.LEFT)
+    acc_label = ttk.Label(performance_display, text='Accuracy: ')
+    acc_label.pack(side=tk.LEFT)
+    acc_value = ttk.Label(performance_display, textvariable=self._accuracy)
+    acc_value.pack(side=tk.LEFT)
+    performance_display.pack(side=tk.TOP)
+
+    # Current word display
+    self._word_slider = WordSlider(
+      self,
+      word_file=WORD_FILE,
+      width=self.winfo_width(),
+      height=int(self.winfo_height()*0.25))
+    
+    self._word_slider.pack(side=tk.TOP)
+
+    # Typing text box
+    text_box = tk.Text(self)
+    text_box.pack(side=tk.TOP, expand=True, fill=tk.BOTH)
 
   
   # Callback from tk logging key presses
@@ -73,7 +75,7 @@ class TypingSpeedTest(tk.Tk):
       
       case 'space':
         # Maybe special use case?
-        return
+        self._word_slider.next_word()
 
       case _:
         print(ev.keysym)
