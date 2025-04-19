@@ -11,21 +11,45 @@ class WordSlider(ttk.Frame):
 
 
   def next_word(self) -> None:
-    if self._current_word_idx < self._num_words:
-      self._current_word_idx += 1
+    if self._current_list_idx < self._num_words:
+      self._current_list_idx += 1
     else:
-      self._current_word_idx = 0
+      self._current_list_idx = 0
 
-    self._current_word.set(self._word_list[self._current_word_idx])
+    self._set_word()
 
 
   def prev_word(self) -> None:
-    if self._current_word_idx > 0:
-      self._current_word_idx -= 1
+    if self._current_list_idx > 0:
+      self._current_list_idx -= 1
     else:
-      self._current_word_idx = self._num_words
+      self._current_list_idx = self._num_words
     
-    self._current_word.set(self._word_list[self._current_word_idx])
+    self._set_word()
+
+
+  def check_char(self, char: str) -> bool:
+    is_match = True
+    current_word = self._current_word.get()
+    
+    if char != current_word[self._current_word_idx]:
+      is_match = False
+
+    if self._current_word_idx < self._current_word_length:
+      self._current_word_idx += 1
+      self._current_word_label.config(underline=self._current_word_idx)
+    else:
+      self.next_word()
+
+    return is_match
+
+  
+  def _set_word(self) -> None:
+    new_word = self._word_list[self._current_list_idx]
+    self._current_word.set(new_word)
+    self._current_word_length = len(new_word) - 1
+    self._current_word_idx = 0
+    self._current_word_label.config(underline=self._current_word_idx)
 
 
   # Load words from file into a list
@@ -42,12 +66,14 @@ class WordSlider(ttk.Frame):
 
   def _prepare_words(self) -> None:
     self._num_words = len(self._word_list) - 1
+    self._current_list_idx = 0
+    self._current_word = tk.StringVar(self, value=self._word_list[self._current_list_idx])
+    self._current_word_length = len(self._current_word.get()) - 1
     self._current_word_idx = 0
-    self._current_word = tk.StringVar(self, value=self._word_list[self._current_word_idx])
-    self._current_word_length = len(self._current_word.get())
 
 
   def _create_slider(self) -> None:
     display_font = font.Font(family='Helvetica', name='WordFont', size=36, weight='bold')
-    current_word = ttk.Label(self, textvariable=self._current_word, font=display_font, padding=(30, 30))
-    current_word.pack()
+    self._current_word_label = ttk.Label(self, textvariable=self._current_word, font=display_font, padding=(30, 30))
+    self._current_word_label.config(underline=self._current_word_idx)
+    self._current_word_label.pack()

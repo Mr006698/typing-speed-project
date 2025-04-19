@@ -15,7 +15,6 @@ class TypingSpeedTest(tk.Tk):
     self.title('Typing Speed Test')
     self.minsize(640, 480)
     self._load_theme()
-    self.bind('<Key>', self._key_press)
     # Hide the root window until centered on screen
     self.withdraw()
     self._center_window()
@@ -31,14 +30,14 @@ class TypingSpeedTest(tk.Tk):
     self._accuracy = tk.StringVar(self, '0%')
     performance_display = ttk.Frame(self)
     wpf_label = ttk.Label(performance_display, text='Words per Minute: ')
-    wpf_label.pack(side=tk.LEFT)
+    wpf_label.pack(side=tk.LEFT, padx=(20, 0), pady=(10, 0))
     wpf_value = ttk.Label(performance_display, textvariable=self._words_per_minute)
-    wpf_value.pack(side=tk.LEFT)
-    acc_label = ttk.Label(performance_display, text='Accuracy: ')
-    acc_label.pack(side=tk.LEFT)
+    wpf_value.pack(side=tk.LEFT, padx=(0, 0), pady=(10, 0))
     acc_value = ttk.Label(performance_display, textvariable=self._accuracy)
-    acc_value.pack(side=tk.LEFT)
-    performance_display.pack(side=tk.TOP)
+    acc_value.pack(side=tk.RIGHT, padx=(0, 20), pady=(10, 0))
+    acc_label = ttk.Label(performance_display, text='Accuracy: ')
+    acc_label.pack(side=tk.RIGHT, padx=(0, 0), pady=(10, 0))
+    performance_display.pack(side=tk.TOP, fill=tk.X)
 
     # Current word display
     self._word_slider = WordSlider(
@@ -47,11 +46,14 @@ class TypingSpeedTest(tk.Tk):
       width=self.winfo_width(),
       height=int(self.winfo_height()*0.25))
     
-    self._word_slider.pack(side=tk.TOP)
+    self._word_slider.pack(side=tk.TOP, fill=tk.X)
 
     # Typing text box
-    text_box = tk.Text(self)
-    text_box.pack(side=tk.TOP, expand=True, fill=tk.BOTH)
+    self._text_box = tk.Text(self)
+    self._text_tag_buffer: str | None = None
+    self._text_box.tag_configure('Red', background='lightsalmon')
+    self._text_box.bind('<Key>', self._key_press)
+    self._text_box.pack(side=tk.TOP, expand=True, fill=tk.BOTH)
 
   
   # Callback from tk logging key presses
@@ -64,7 +66,6 @@ class TypingSpeedTest(tk.Tk):
         return
       
       case 'Return':
-        # Maybe special use case?
         return
       
       case 'Control_L':
@@ -75,10 +76,29 @@ class TypingSpeedTest(tk.Tk):
       
       case 'space':
         # Maybe special use case?
-        self._word_slider.next_word()
+        return
+      
+      case 'BackSpace':
+        # TODO: Move WordSlider.current_word_index() back one
+        return
 
       case _:
-        print(ev.keysym)
+        self._process_key(ev.char)
+
+  
+  def _process_key(self, char: str) -> None:
+    char_pos = self._text_box.index(tk.INSERT)
+    if self._text_tag_buffer is not None:
+      self._text_box.tag_add('Red', self._text_tag_buffer, char_pos)
+      self._text_tag_buffer = None
+
+    if not self._word_slider.check_char(char):
+      self._text_tag_buffer = char_pos
+
+    
+  def _get_end_index(self, char_pos: str) -> str:
+    row_idx, col_idx = char_pos.split('.')
+    return f'{row_idx}.{(int(col_idx) + 1)}'
 
 
   # Window config functions
@@ -88,6 +108,8 @@ class TypingSpeedTest(tk.Tk):
     styles.theme_use('clam')
     styles.configure('Vertical.TScrollbar', background='lightgrey', arrowsize=16)
     styles.configure('Horizontal.TScrollbar', background='lightgrey', arrowsize=16)
+    styles.configure('TFrame', background='lavender')
+    styles.configure('TLabel', background='lavender')
   
 
   def _center_window(self) -> None:
