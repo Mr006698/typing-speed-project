@@ -49,10 +49,11 @@ class TypingSpeedTest(tk.Tk):
     self._word_slider.pack(side=tk.TOP, fill=tk.X)
 
     # Typing text box
-    self._text_box = tk.Text(self)
+    self._text_box = tk.Text(self, padx=25, pady=25)
     self._text_tag_buffer: str | None = None
     self._text_box.tag_configure('Red', background='lightsalmon')
     self._text_box.bind('<Key>', self._key_press)
+    self._text_box.focus_set()
     self._text_box.pack(side=tk.TOP, expand=True, fill=tk.BOTH)
 
   
@@ -78,9 +79,21 @@ class TypingSpeedTest(tk.Tk):
         # Maybe special use case?
         return
       
-      case 'BackSpace':
-        # TODO: Move WordSlider.current_word_index() back one
+      case 'Caps_Lock':
         return
+      
+      case 'Tab':
+        return
+      
+      case 'BackSpace':
+        # Move WordSlider.current_word_index() back one if not space
+        char_pos = self._text_box.index(tk.INSERT)
+        if char_pos == '1.0': # Ignore start of  text
+          return
+        
+        deleted_char = self._text_box.get(self._get_beg_index(char_pos), char_pos)
+        if not deleted_char.isspace():
+          self._word_slider.delete_char()
 
       case _:
         self._process_key(ev.char)
@@ -99,6 +112,16 @@ class TypingSpeedTest(tk.Tk):
   def _get_end_index(self, char_pos: str) -> str:
     row_idx, col_idx = char_pos.split('.')
     return f'{row_idx}.{(int(col_idx) + 1)}'
+  
+  def _get_beg_index(self, char_pos: str) -> str:
+    row_idx, col_idx = char_pos.split('.')
+    if col_idx == '0' and row_idx != '1': # Must be multiline
+      # Get the start of the next line
+      row_end_idx = self._text_box.index(f'{(int(row_idx) - 1)}.end')
+
+      return row_end_idx
+
+    return f'{row_idx}.{(int(col_idx) - 1)}' # TODO: This might cause a bug if a newline
 
 
   # Window config functions

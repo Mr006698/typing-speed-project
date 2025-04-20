@@ -42,6 +42,16 @@ class WordSlider(ttk.Frame):
       self.next_word()
 
     return is_match
+  
+
+  def delete_char(self) -> None:
+    self._current_word_idx -= 1
+    if self._current_word_idx < 0:
+      self.prev_word()
+      # Reset the index back to the end of the current word
+      self._current_word_idx = len(self._current_word.get()) - 1
+
+    self._current_word_label.config(underline=self._current_word_idx)
 
   
   def _set_word(self) -> None:
