@@ -1,3 +1,4 @@
+from math import fsum
 import tkinter as tk
 from tkinter import ttk
 from ctypes import windll
@@ -5,9 +6,9 @@ windll.shcore.SetProcessDpiAwareness(1)
 
 from word_slider import WordSlider
 
-from pprint import pprint
-
-WORD_FILE = 'typing-speed/test_file.txt'
+WORD_FILE: str = 'typing-speed/test_file.txt'
+STAT_UPDATE_FREQ: int = 1000 # in milliseconds
+MILLI_SEC_PER_MIN: int = 60000
 
 class TypingSpeedTest(tk.Tk):
   def __init__(self, screenName = None, baseName = None, className = "Tk", useTk = True, sync = False, use = None) -> None:
@@ -22,12 +23,13 @@ class TypingSpeedTest(tk.Tk):
 
     # Create the GUI
     self._create_gui()
+    self._create_timer()
 
 
   def _create_gui(self) -> None:
-    # Speed and accuracy metrics
-    self._words_per_minute = tk.StringVar(self, '0')
-    self._accuracy = tk.StringVar(self, '0%')
+    # Speed and accuracy statistics
+    self._words_per_minute = tk.StringVar(self, '0.00')
+    self._accuracy = tk.StringVar(self, '100%')
     performance_display = ttk.Frame(self)
     wpf_label = ttk.Label(performance_display, text='Words per Minute: ')
     wpf_label.pack(side=tk.LEFT, padx=(20, 0), pady=(10, 0))
@@ -76,7 +78,7 @@ class TypingSpeedTest(tk.Tk):
         return
       
       case 'space':
-        # Maybe special use case?
+        self._process_key(ev.char)
         return
       
       case 'Caps_Lock':
@@ -105,6 +107,9 @@ class TypingSpeedTest(tk.Tk):
       self._text_box.tag_add('Red', self._text_tag_buffer, char_pos)
       self._text_tag_buffer = None
 
+    if char.isspace(): # Record space in the buffer but not check it against the list in word_slider
+      return
+    
     if not self._word_slider.check_char(char):
       self._text_tag_buffer = char_pos
 
@@ -121,7 +126,42 @@ class TypingSpeedTest(tk.Tk):
 
       return row_end_idx
 
-    return f'{row_idx}.{(int(col_idx) - 1)}' # TODO: This might cause a bug if a newline
+    return f'{row_idx}.{(int(col_idx) - 1)}'
+  
+
+  def _create_timer(self) -> None:
+    self._update_tick:int = STAT_UPDATE_FREQ
+    self._wpm_list:list[float] = []
+    self.after(STAT_UPDATE_FREQ, self._update_timer) # Initial timer start
+
+  
+  def _update_timer(self) -> None:
+    self._update_tick += STAT_UPDATE_FREQ
+    self._calculate_wpm()
+    self._calculate_acc()
+    self.after(STAT_UPDATE_FREQ, self._update_timer)  # Recursive call
+
+
+  def _calculate_wpm(self) -> None:
+    wpm:float = (self._word_slider.word_count / self._update_tick) * MILLI_SEC_PER_MIN
+    self._wpm_list.append(wpm)
+    avg_wpm = self._calculate_avg_wpm()
+    self._words_per_minute.set(avg_wpm)
+
+
+  def _calculate_avg_wpm(self) -> str:
+    wpm_samples = len(self._wpm_list)
+    wpm_total = fsum(self._wpm_list)
+    return f'{wpm_total / wpm_samples:.2f}'
+  
+
+  def _calculate_acc(self) -> None:
+    num_errors:float = len(self._text_box.tag_ranges('Red')) * 0.5
+    if num_errors > 0.0:
+      text_str:str = self._text_box.get('1.0', 'end-1c')
+      num_chars = len(text_str) - text_str.count('\n')
+      error_percent = (num_errors / num_chars) * 100
+      self._accuracy.set(f'{100 - error_percent:.2f}%')
 
 
   # Window config functions

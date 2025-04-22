@@ -17,6 +17,7 @@ class WordSlider(ttk.Frame):
       self._current_list_idx = 0
 
     self._set_word()
+    self.word_count += 1
 
 
   def prev_word(self) -> None:
@@ -26,6 +27,7 @@ class WordSlider(ttk.Frame):
       self._current_list_idx = self._num_words
     
     self._set_word()
+    self.word_count -= 1
 
 
   def check_char(self, char: str) -> bool:
@@ -80,6 +82,7 @@ class WordSlider(ttk.Frame):
     self._current_word = tk.StringVar(self, value=self._word_list[self._current_list_idx])
     self._current_word_length = len(self._current_word.get()) - 1
     self._current_word_idx = 0
+    self.word_count = 0 # Number of completed words
 
 
   def _create_slider(self) -> None:
